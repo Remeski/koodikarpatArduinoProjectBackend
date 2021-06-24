@@ -14,9 +14,12 @@ app.use(cors())
 
 // Routing
 app.use('/temperature', require('./routes/Temperature'))
+app.use('/messagedisplay', require('./routes/MessageDisplay'))
 
 app.get('/', (req, res) => {
-  res.send('Server here')
+  res.send(
+    'Shhh, be quiet. Arduino project backend needs absolute silence to work fully'
+  )
 })
 
 app.listen(PORT, () => console.log(`Server started on port ${PORT}`))

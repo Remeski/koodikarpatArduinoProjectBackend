@@ -2,27 +2,38 @@ const Message = require('../Models/Message')
 const TempMeasurement = require('../Models/TempMeasurement')
 
 const router = require('express').Router()
-
-const SHOWNMESSAGES = []
-const SHOWNMESSAGES_LIMIT = 5
+const NodeCache = require('node-cache')
+const messageCache = new NodeCache()
 
 // GET /messagedisplay/
 router.get('/', async (req, res) => {
-  try {
-    let message
-
-    let messages = await Message.find({ isShown: false })
-    if (messages.length < 1) {
-      messages = await Message.find({})
-    }
-
+  const randomMessage = messages => {
     const randomNum = Math.floor(Math.random() * messages.length)
-    message = messages[randomNum]
+    const message = messages[randomNum]
+    return message
+  }
 
-    SHOWNMESSAGES.push(message.id)
+  const handleMessages = async messages => {
+    if (messages.length < 1) {
+      return res.status(404).json({ error: 'No messages found' })
+    }
+    const message = randomMessage(messages)
+    messageCache.set('lastMessage', message.id)
 
-    res.json(message)
     await Message.findByIdAndUpdate(message.id, { isShown: true })
+
+    return res.json(message)
+  }
+
+  try {
+    const messages = await Message.find({ isShown: false })
+    if (messages.length < 1) {
+      const messages = await Message.find({
+        _id: { $ne: messageCache.get('lastMessage') },
+      })
+      return handleMessages(messages)
+    }
+    handleMessages(messages)
   } catch (error) {
     console.log(error)
     res.status(500).json({ error: 'Internal server error' })
@@ -31,14 +42,15 @@ router.get('/', async (req, res) => {
 
 // POST /messagedisplay/
 router.post('/', (req, res) => {
-  const { text } = req.body
-  if (!text) {
+  const { row1, row2, colour } = req.body
+  if (!row1 && !row2 && !colour) {
     return res.status(400).json({ error: 'Invalid body' })
   }
 
   const message = new Message({
-    text,
-    date: new Date(),
+    row1,
+    row2,
+    colour,
   })
 
   message
@@ -47,7 +59,9 @@ router.post('/', (req, res) => {
       res.status(201).end()
     })
     .catch(err => {
-      console.log(err)
+      if (err.name === 'ValidationError') {
+        return res.status(400).json({ error: err.message })
+      }
       res.status(500).json({ error: 'Internal server error' })
     })
 })

@@ -18,7 +18,7 @@ app.use('/messagedisplay', require('./routes/MessageDisplay'))
 
 app.get('/', (req, res) => {
   res.send(
-    'Shhh, be quiet. Arduino project backend needs absolute silence to work fully'
+    'Shhh, be quiet. This backend needs absolute silence to work to its fullest potential'
   )
 })
 

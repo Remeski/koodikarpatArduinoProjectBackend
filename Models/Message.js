@@ -5,7 +5,7 @@ const colorValidator = v => {
 }
 
 const messageSchema = new mongoose.Schema({
-  row1: {
+  /* row1: {
     type: String,
     maxLength: 5,
     required: true,
@@ -18,6 +18,16 @@ const messageSchema = new mongoose.Schema({
   colour: {
     type: String,
     validate: [colorValidator, 'Invalid color'],
+    required: true,
+  }, */
+  text: {
+    type: String,
+    maxLength: 7,
+    required: true,
+  },
+  size: {
+    type: Number,
+    max: 3,
     required: true,
   },
   isShown: { type: Boolean, default: false },

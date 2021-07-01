@@ -42,15 +42,14 @@ router.get('/', async (req, res) => {
 
 // POST /messagedisplay/
 router.post('/', (req, res) => {
-  const { row1, row2, colour } = req.body
-  if (!row1 && !row2 && !colour) {
+  const { text, size } = req.body
+  if (!text || !size) {
     return res.status(400).json({ error: 'Invalid body' })
   }
 
   const message = new Message({
-    row1,
-    row2,
-    colour,
+    text,
+    size,
   })
 
   message

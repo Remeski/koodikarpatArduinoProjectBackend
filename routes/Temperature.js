@@ -1,64 +1,119 @@
 const router = require('express').Router()
 
-const TempMeasurement = require('../Models/TempMeasurement')
+const { fetchAllTempData, handleErrors } = require('../util/Temperature')
 
-router.get('/', (req, res) => {
-  const accuracyInMilliseconds = 60000 // 1 minute
+router.get('/', async (req, res) => {
+  fetchAllTempData()
+    .then(data => res.json(data))
+    .catch(err => handleErrors(err, res))
+})
 
-  const getAllSensors = data => {
-    return data.reduce((acc, cur) => {
-      const { sensor } = cur
+// GET /temperature/:startDate/:endDate
+router.get('/:startDate/:endDate', async (req, res) => {
+  const { startDate, endDate } = req.params
 
-      if (!acc.includes(sensor)) {
-        return [...acc].concat(sensor)
-      }
-      return acc
-    }, [])
+  const temperatureData = await fetchAllTempData()
+
+  const findClosestToZero = array => {
+    const includesNegativeValues = !!array.find(elem => elem < -1)
+    if (includesNegativeValues) {
+      const positiveNumbers = array.filter(elem => elem > 0)
+      const closestPositiveNumber =
+        Math.min(...positiveNumbers) && positiveNumbers
+
+      const negativeNumbers = array.filter(elem => elem < 0)
+      const closestNegativeNumber = Math.max(...negativeNumbers)
+
+      const closestNumber =
+        closestPositiveNumber > Math.abs(closestNegativeNumber)
+          ? closestPositiveNumber
+          : closestNegativeNumber
+
+      return closestNumber
+    }
+    return Math.min(...array)
   }
 
-  const reformatData = data => {
-    const allSensorValues = data.map(elem => {
-      const { sensor, temperature, date } = elem
+  const findClosestMatch = (dateArray, dateTarget) => {
+    const dateDiffs = []
 
-      return { [sensor]: temperature, date }
+    dateArray.forEach(elem => {
+      const parsedElem = new Date(elem)
+      const parsedTarget = new Date(dateTarget)
+
+      console.log(parsedElem.getDate(), parsedTarget.getDate())
+
+      if (
+        parsedElem.getFullYear() === parsedTarget.getFullYear() &&
+        parsedElem.getMonth() === parsedTarget.getMonth() &&
+        parsedElem.getDate() < parsedTarget.getDate()
+      ) {
+        const diff = Date.parse(elem) - Date.parse(dateTarget)
+        dateDiffs.push(diff)
+      }
     })
-    const returnArray = allSensorValues.reduce((acc, cur) => {
-      if (acc.length < 1) {
-        return [...acc].concat(cur)
-      }
 
-      const index = acc.length - 1
-      const lastItem = { ...acc[index] }
-
-      if (!Object.keys(lastItem).includes(Object.keys(cur)[0])) {
-        const subtraction = cur.date.getTime() - lastItem.date.getTime()
-        if (subtraction <= accuracyInMilliseconds) {
-          const obj = {
-            [Object.keys(cur)[0]]: cur[Object.keys(cur)[0]],
-            ...lastItem,
-          }
-          return [...acc].slice(0, acc.length - 1).concat(obj)
-        }
-      }
-
-      return [...acc].concat(cur)
-    }, [])
-
-    return returnArray
+    const closest = findClosestToZero(dateDiffs)
+    const index = dateDiffs.findIndex(elem => elem === closest)
+    return dateArray[index]
   }
 
-  TempMeasurement.find({})
-    .then(dbRes => {
-      const formattedData = reformatData(dbRes)
-      const allSensors = getAllSensors(dbRes)
+  const findMatch = (dateArray, dateTarget) => {
+    const formatDate = date => {
+      const parsedDate = new Date(date)
 
-      const data = { allsensors: allSensors, data: [...formattedData] }
-      res.json(data)
+      return `${parsedDate.getFullYear()}-${
+        parsedDate.getMonth() + 1
+      }-${parsedDate.getDate()}`
+    }
+    const index = dateArray.findIndex(
+      elem => formatDate(elem) === formatDate(dateTarget)
+    )
+    if (index === -1) {
+      return false
+    }
+    return dateArray[index]
+  }
+
+  if (temperatureData !== undefined) {
+    const dateArray = temperatureData.data.map(elem => elem.date)
+
+    let msg = {}
+
+    let startingElement = findMatch(dateArray, startDate)
+    if (!startingElement) {
+      startingElement = findClosestMatch(dateArray, startDate)
+      msg.msg = 'Using closest matching data found'
+    }
+    const startIndex = dateArray.findIndex(elem => elem === startingElement)
+
+    let endingElement = findMatch(
+      dateArray.slice(startIndex).reverse(),
+      endDate
+    )
+    if (!endingElement) {
+      endingElement = findClosestMatch(
+        dateArray.slice(startIndex).reverse(),
+        endDate
+      )
+      msg.msg = 'Using closest matching data found'
+    }
+    const endIndex = dateArray.findIndex(elem => elem === endingElement)
+
+    console.log({ startIndex, endIndex })
+    return res.json({
+      ...temperatureData,
+      data: temperatureData.data.slice(startIndex, endIndex),
+      ...msg,
     })
-    .catch(err => {
-      console.log(err)
-      res.status(500).json({ error: 'Internal server error' })
-    })
+  }
+  console.log('hello')
+})
+
+// Dev route
+router.get('/getdate', (req, res) => {
+  const date = new Date()
+  res.send(date)
 })
 
 // Protected

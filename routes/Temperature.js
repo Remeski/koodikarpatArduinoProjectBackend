@@ -83,7 +83,7 @@ router.get('/:startDate/:endDate', async (req, res) => {
     let startingElement = findMatch(dateArray, startDate)
     if (!startingElement) {
       startingElement = findClosestMatch(dateArray, startDate)
-      msg.msg = 'Using closest matching data found'
+      msg.msg = 'Some data was missing. Using closest matching data found.'
     }
     const startIndex = dateArray.findIndex(elem => elem === startingElement)
 

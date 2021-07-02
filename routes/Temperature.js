@@ -96,7 +96,7 @@ router.get('/:startDate/:endDate', async (req, res) => {
         dateArray.slice(startIndex).reverse(),
         endDate
       )
-      msg.msg = 'Using closest matching data found'
+      msg.msg = 'Some data was missing. Using closest matching data found'
     }
     const endIndex = dateArray.findIndex(elem => elem === endingElement)
 
@@ -108,12 +108,6 @@ router.get('/:startDate/:endDate', async (req, res) => {
     })
   }
   console.log('hello')
-})
-
-// Dev route
-router.get('/getdate', (req, res) => {
-  const date = new Date()
-  res.send(date)
 })
 
 // Protected

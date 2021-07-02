@@ -1,3 +1,3 @@
-## Koodikärpät Project
+# Koodikärpät Project
 
-# API for an aruino project made with express
+API for an arduino project made with [express.js](https://expressjs.com/)
